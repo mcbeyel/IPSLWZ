@@ -1,0 +1,13 @@
+{
+  "id": "{C9E938E7-7CF6-4A02-B99E-30C3565D5E21}",
+  "name": "LWZ303",
+  "type": 3,
+  "vendor": "",
+  "aliases": [
+    "LWZ303"
+  ],
+  "parentRequirements": ["{79827379-F36E-4ADA-8A95-5F8D1DC92FA9}"],
+  "childRequirements": [],
+  "implemented": ["{018EF6B5-AB94-40C6-AA53-46943E824ACF}"],
+  "prefix": "LWZ303"
+}
