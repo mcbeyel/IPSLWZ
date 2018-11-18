@@ -1,5 +1,16 @@
 <?
 
+/**
+ * IP-Symcon Module for Stiebel Eltron LWZ 303
+ *
+ */
+
+/**
+ * Helper function to check if a value is set, otherwise return default value
+ * @param $var
+ * @param null $default
+ * @return null
+ */
 function issetDef(&$var, $default = null)
 {
 
@@ -7,12 +18,23 @@ function issetDef(&$var, $default = null)
 
 }
 
+
+/**
+ * Converts a string into a HEX string
+ * @param $dataString
+ * @return mixed
+ */
 function toHex($dataString)
 {
     $hexstr = unpack('H*', $dataString);
     return array_shift($hexstr);
 }
 
+/**
+ * Converts a hex string into an integer value
+ * @param $data
+ * @return int
+ */
 function hex2int($data)
 {
 
@@ -26,10 +48,9 @@ function hex2int($data)
 
 
 /**
+ * Class LWZ303Command
  *
- * Author: Timo Beyel
- *
- * Description:
+ * Base Class for all further commands
  */
 class LWZ303Command
 {
@@ -43,6 +64,11 @@ class LWZ303Command
     }
 }
 
+/**
+ * Class LWZ303Command_Version
+ *
+ * Fetches the version of the firmware
+ */
 class LWZ303Command_Version extends LWZ303Command
 {
     function __construct()
@@ -65,6 +91,8 @@ class LWZ303Command_Version extends LWZ303Command
 
 /**
  * Class LWZ303Command_Global
+ *
+ * Fetches several status values
  *
  * Example:
  * 00 00
@@ -159,7 +187,7 @@ class LWZ303Command_Global extends LWZ303Command
                 "name"  => "Verflüssigertemperatur",
                 "value" => $condens_temp
             ),
-            
+
             array(
                 "id"    => "outvent_speed",
                 "name"  => "Drehzahl Ablüfter",
@@ -180,16 +208,20 @@ class LWZ303Command_Global extends LWZ303Command
     }
 }
 
-/*
-Example:
 
-01      Nr. of errrors
-01      Error Index (1-Nr. of errors)
-00 0F   Error code
-00 9B   Time (1:55)
-05 DD   Date (15.01)
-*/
-
+/**
+ * Class LWZ303Command_Errorlog
+ *
+ * Fetches the current errorlog
+ *
+ * Example:
+ *
+ * 01      Nr. of errrors
+ * 01      Error Index (1-Nr. of errors)
+ * 00 0F   Error code
+ * 00 9B   Time (1:55)
+ * 05 DD   Date (15.01)
+ */
 class LWZ303Command_Errorlog extends LWZ303Command
 {
     private $error_codes = array(
@@ -258,9 +290,15 @@ class LWZ303Command_Errorlog extends LWZ303Command
     }
 }
 
+/**
+ * Class LWZ303
+ *
+ * Implementation of the IPSModule
+ */
 class LWZ303 extends IPSModule
 {
 
+    //A state machine is implemented for the command parsing
     const STATE_WAIT_NONE = "NONE";
     const STATE_WAIT_ACK_COMMAND_INIT = "WAIT_ACK_COMMAND_INIT";
     const STATE_WAIT_ACK_COMMAND = "WAIT_ACK_COMMAND";
@@ -280,6 +318,7 @@ class LWZ303 extends IPSModule
     const request_header_set = "0108";
     const request_footer = "1003";
 
+    //Commands which are registered
     const registered_commands = array(
         "LWZ303Command_Version",
         "LWZ303Command_Errorlog",
@@ -362,22 +401,33 @@ class LWZ303 extends IPSModule
 
     }
 
+    /**
+     * Sends a command to the LWZ
+     * @param $command
+     * @param $data
+     */
     public function SendCommand($command, $data)
     {
 
         $classname = "LWZ303Command_" . $command;
-        $class = new $classname();
-        $code = hex2bin($class->command_id);
-        $header = hex2bin(LWZ303::request_header_get);
-        $footer = hex2bin(LWZ303::request_footer);
-        $checksum = $this->escapeData($this->createChecksum($header . $code));
-        $code = $this->escapeData($code);
 
-        $command_in_queue = toHex($header . $checksum . $code . $footer);
+        if (class_exists($classname)) {
+            $class = new $classname();
+            $code = hex2bin($class->command_id);
+            $header = hex2bin(LWZ303::request_header_get);
+            $footer = hex2bin(LWZ303::request_footer);
+            $checksum = $this->escapeData($this->createChecksum($header . $code));
+            $code = $this->escapeData($code);
 
-        IPS_LogMessage("LWZ303", "Queing command:" . $command_in_queue);
-        SetValue($this->GetIDForIdent("command"), $command_in_queue);
-        $this->initializeCommand();
+            $command_in_queue = toHex($header . $checksum . $code . $footer);
+
+            IPS_LogMessage("LWZ303", "Queing command:" . $command_in_queue);
+            SetValue($this->GetIDForIdent("command"), $command_in_queue);
+            $this->initializeCommand();
+        }
+        else {
+            IPS_LogMessage("LWZ303", "Invalid command:" . $command);
+        }
 
     }
 
